@@ -1,0 +1,11 @@
+MINIO_VOLUMES="https://minio{1...4}.local:9000/mnt/disk{1...4}/minio"
+MINIO_CERTS_DIR="/home/minio-user/.minio/certs"
+
+
+MINIO_OPTS="--console-address :9001"
+
+
+MINIO_ROOT_USER=minioadmin
+
+
+MINIO_ROOT_PASSWORD=miniopassword

@@ -1,0 +1,80 @@
+---
+- name: Deploy MinIO Multi-Node Multi-Drive
+  hosts: all
+  become: yes
+  vars:
+    minio_user: "minio-user"
+    minio_group: "minio-user"
+    minio_root_user: "minioadmin"
+    minio_root_password: "minioadmin"
+    minio_cert_dir: "/home/minio-user/.minio/certs"
+
+  tasks:
+    - name: Transfer and execute disk preparation script
+      copy:
+        src: /home/vagrant/playbook/prepare_disks.sh
+        dest: /tmp/prepare_disks.sh
+        mode: '0755'
+
+    - name: Run disk preparation script
+      command: /tmp/prepare_disks.sh
+
+    - name: Create MinIO user and group
+      user:
+        name: "{{ minio_user }}"
+        group: "{{ minio_group }}"
+        system: yes
+        shell: /sbin/nologin
+
+#    - name: Download MinIO binary
+#      get_url:
+#        url: "https://dl.min.io/server/minio/release/linux-amd64/minio"
+#        dest: /usr/local/bin/minio
+#        mode: '0755'
+#
+    - name: Copy MinIO systemd service file
+      copy:
+        src: /home/vagrant/playbook/minio.service
+        dest: /etc/systemd/system/minio.service
+        mode: '0644'
+
+    - name: Copy MinIO environment file
+      copy:
+        src: /home/vagrant/playbook/minio
+        dest: /etc/default/minio
+        mode: '0644'
+
+    - name: Copy TLS certificate and private key
+      copy:
+        src: /home/vagrant/playbook/certs/public.crt
+        dest: "{{ minio_cert_dir }}/public.crt"
+        owner: "{{ minio_user }}"
+        group: "{{ minio_group }}"
+        mode: '0600'
+
+    - name: Copy private key
+      copy:
+        src: /home/vagrant/playbook/certs/private.key
+        dest: "{{ minio_cert_dir }}/private.key"
+        owner: "{{ minio_user }}"
+        group: "{{ minio_group }}"
+        mode: '0600'
+
+    - name: Ensure MinIO certificate directory exists
+      file:
+        path: "{{ minio_cert_dir }}"
+        state: directory
+        owner: "{{ minio_user }}"
+        group: "{{ minio_group }}"
+        mode: '0700'
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable and start MinIO service
+      systemd:
+        name: minio
+        enabled: yes
+        state: started
+
